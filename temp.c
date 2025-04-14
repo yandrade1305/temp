@@ -10,6 +10,7 @@
 const uint I2C_SDA = 14;
 const uint I2C_SCL = 15;
 #define TEMP_SENSOR_ADC_INPUT 4  // Canal ADC para sensor interno
+#define NUM_READINGS 10  // Número de leituras para fazer a média
 
 // Inicialização do ADC para sensor de temperatura
 void adc_init_temp_sensor() {
@@ -30,6 +31,19 @@ float read_internal_temperature() {
     // Conversão para temperatura (fórmula do datasheet)
     // Temperatura em °C = 27 - (Vmedido - 0.706)/0.001721
     return 27.0f - (voltage - 0.706f) / 0.001721f;
+}
+
+#define NUM_READINGS 10  // Número de leituras para fazer a média
+
+float read_average_temperature() {
+    float sum = 0.0f;
+
+    for (int i = 0; i < NUM_READINGS; i++) {
+        sum += read_internal_temperature();
+        sleep_ms(100);  // Pequeno atraso entre leituras para estabilidade
+    }
+
+    return sum / NUM_READINGS;
 }
 
 int main() {
@@ -67,23 +81,24 @@ int main() {
     while (true) {
         // Limpa o buffer do display
         memset(ssd, 0, ssd1306_buffer_length);
-
-        // Lê a temperatura
-        temperature = read_internal_temperature();
-
+    
+        // Lê a temperatura com média
+        temperature = read_average_temperature();
+    
         // Converte temperatura para string com 1 casa decimal
         snprintf(temp_str, sizeof(temp_str), "%.1f C", temperature);
-
+    
         // Desenha no display
         ssd1306_draw_string(ssd, 10, 10, title_str);
         ssd1306_draw_string(ssd, 40, 30, temp_str);
-
+    
         // Atualiza o display
         render_on_display(ssd, &frame_area);
-
-        // Pequena pausa entre leituras (1 segundo)
+    
+        // Pequena pausa entre atualizações (1 segundo)
         sleep_ms(1000);
     }
+    
 
     return 0;
 }
